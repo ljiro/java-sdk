@@ -17,6 +17,13 @@
     <description>Core ACP implementation with stdio transport - zero external dependencies beyond Reactor</description>
 
     <dependencies>
+        <!-- ACP annotations (@UnstableAcpApi, etc.) - zero-dependency module -->
+        <dependency>
+            <groupId>com.agentclientprotocol</groupId>
+            <artifactId>acp-annotations</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+
         <!-- Reactor for async operations -->
         <dependency>
             <groupId>io.projectreactor</groupId>

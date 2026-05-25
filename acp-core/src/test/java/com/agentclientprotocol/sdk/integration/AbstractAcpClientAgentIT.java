@@ -6,6 +6,7 @@ package com.agentclientprotocol.sdk.integration;
 
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -466,6 +467,87 @@ public abstract class AbstractAcpClientAgentIT {
 
 			assertThat(cancelLatch.await(5, TimeUnit.SECONDS)).isTrue();
 			assertThat(cancelledSessionId.get()).isEqualTo("session-cancel-test");
+
+			// Cleanup
+			client.closeGracefully().block(TIMEOUT);
+			agent.closeGracefully().block(TIMEOUT);
+		}
+		finally {
+			closeTransports();
+		}
+	}
+
+	@Test
+	void agentToClientElicitationFormWorks() throws Exception {
+		AcpClientTransport clientTransport = createClientTransport();
+		AcpAgentTransport agentTransport = createAgentTransport();
+
+		try {
+			AtomicReference<AcpSchema.CreateElicitationResponse> elicitationResponse = new AtomicReference<>();
+			CountDownLatch elicitationLatch = new CountDownLatch(1);
+			AtomicReference<AcpAsyncAgent> agentRef = new AtomicReference<>();
+
+			// Build agent that sends a form-mode elicitation during prompt
+			AcpAsyncAgent agent = AcpAgent.async(agentTransport)
+				.requestTimeout(TIMEOUT)
+				.initializeHandler(request -> Mono
+					.just(new AcpSchema.InitializeResponse(1, new AcpSchema.AgentCapabilities(), List.of())))
+				.newSessionHandler(
+						request -> Mono.just(new AcpSchema.NewSessionResponse("session-elicit", null, null)))
+				.promptHandler((request, context) -> {
+					// Build a form schema asking the user to pick a strategy
+					var schema = new AcpSchema.ElicitationSchema(
+							Map.of("strategy", AcpSchema.StringPropertySchema.singleSelect("Strategy",
+									List.of(new AcpSchema.EnumOption("fast", "Fast"),
+											new AcpSchema.EnumOption("safe", "Safe")))),
+							List.of("strategy"));
+
+					var elicitRequest = AcpSchema.CreateElicitationRequest.form(
+							"session-elicit", "Pick a strategy", schema);
+
+					return agentRef.get()
+						.createElicitation(elicitRequest)
+						.doOnNext(response -> {
+							elicitationResponse.set(response);
+							elicitationLatch.countDown();
+						})
+						.then(Mono.just(new AcpSchema.PromptResponse(AcpSchema.StopReason.END_TURN)));
+				})
+				.build();
+			agentRef.set(agent);
+
+			// Build client with elicitation handler that accepts with "fast"
+			AcpAsyncClient client = AcpClient.async(clientTransport)
+				.requestTimeout(TIMEOUT)
+				.createElicitationHandler(elicitRequest -> {
+					assertThat(elicitRequest.mode()).isEqualTo("form");
+					assertThat(elicitRequest.message()).isEqualTo("Pick a strategy");
+					assertThat(elicitRequest.requestedSchema()).isNotNull();
+					assertThat(elicitRequest.requestedSchema().properties()).containsKey("strategy");
+					return Mono.just(AcpSchema.CreateElicitationResponse.accept(
+							Map.of("strategy", "fast")));
+				})
+				.build();
+
+			// Start, initialize, create session
+			agent.start().subscribe();
+			Thread.sleep(100);
+
+			// Advertise elicitation capability
+			var caps = new AcpSchema.ClientCapabilities(
+					new AcpSchema.FileSystemCapability(), false,
+					new AcpSchema.ElicitationCapabilities(), null);
+			client.initialize(new AcpSchema.InitializeRequest(1, caps)).block(TIMEOUT);
+			client.newSession(new AcpSchema.NewSessionRequest("/workspace", List.of())).block(TIMEOUT);
+
+			// Send prompt which triggers elicitation
+			client.prompt(new AcpSchema.PromptRequest("session-elicit",
+					List.of(new AcpSchema.TextContent("Help me choose")))).block(TIMEOUT);
+
+			assertThat(elicitationLatch.await(5, TimeUnit.SECONDS)).isTrue();
+			assertThat(elicitationResponse.get()).isNotNull();
+			assertThat(elicitationResponse.get().action()).isEqualTo(AcpSchema.ElicitationAction.ACCEPT);
+			assertThat(elicitationResponse.get().content()).containsEntry("strategy", "fast");
 
 			// Cleanup
 			client.closeGracefully().block(TIMEOUT);

@@ -340,6 +340,29 @@ class DefaultAcpAsyncAgent implements AcpAsyncAgent {
 	}
 
 	@Override
+	public Mono<AcpSchema.CreateElicitationResponse> createElicitation(
+			AcpSchema.CreateElicitationRequest request) {
+		if (session == null) {
+			return Mono.error(new IllegalStateException("Agent not started"));
+		}
+		NegotiatedCapabilities caps = clientCapabilities.get();
+		if (caps != null && !caps.supportsElicitation()) {
+			return Mono.error(new AcpCapabilityException("elicitation"));
+		}
+		return session.sendRequest(AcpSchema.METHOD_ELICITATION_CREATE, request,
+				new TypeRef<AcpSchema.CreateElicitationResponse>() {
+				});
+	}
+
+	@Override
+	public Mono<Void> completeElicitation(AcpSchema.CompleteElicitationNotification notification) {
+		if (session == null) {
+			return Mono.error(new IllegalStateException("Agent not started"));
+		}
+		return session.sendNotification(AcpSchema.METHOD_ELICITATION_COMPLETE, notification);
+	}
+
+	@Override
 	public Mono<Void> closeGracefully() {
 		return Mono.defer(() -> {
 			logger.info("Closing ACP async agent gracefully");

@@ -134,6 +134,24 @@ public interface SyncPromptContext {
 	AcpSchema.KillTerminalCommandResponse killTerminal(AcpSchema.KillTerminalCommandRequest request);
 
 	// ========================================================================
+	// Elicitation
+	// ========================================================================
+
+	/**
+	 * Requests structured user input from the client via a form or URL.
+	 * Blocks until the user responds.
+	 * @param request The elicitation request
+	 * @return The user's response
+	 */
+	AcpSchema.CreateElicitationResponse createElicitation(AcpSchema.CreateElicitationRequest request);
+
+	/**
+	 * Notifies the client that a URL-mode elicitation has completed.
+	 * @param notification The completion notification
+	 */
+	void completeElicitation(AcpSchema.CompleteElicitationNotification notification);
+
+	// ========================================================================
 	// Client Capabilities
 	// ========================================================================
 

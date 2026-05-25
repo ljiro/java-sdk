@@ -137,6 +137,24 @@ public interface PromptContext {
 	Mono<AcpSchema.KillTerminalCommandResponse> killTerminal(AcpSchema.KillTerminalCommandRequest request);
 
 	// ========================================================================
+	// Elicitation
+	// ========================================================================
+
+	/**
+	 * Requests structured user input from the client via a form or URL.
+	 * @param request The elicitation request
+	 * @return A Mono containing the user's response
+	 */
+	Mono<AcpSchema.CreateElicitationResponse> createElicitation(AcpSchema.CreateElicitationRequest request);
+
+	/**
+	 * Notifies the client that a URL-mode elicitation has completed.
+	 * @param notification The completion notification
+	 * @return A Mono that completes when the notification is sent
+	 */
+	Mono<Void> completeElicitation(AcpSchema.CompleteElicitationNotification notification);
+
+	// ========================================================================
 	// Client Capabilities
 	// ========================================================================
 

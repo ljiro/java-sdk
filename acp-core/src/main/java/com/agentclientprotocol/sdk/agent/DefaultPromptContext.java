@@ -107,6 +107,17 @@ class DefaultPromptContext implements PromptContext {
 	}
 
 	@Override
+	public Mono<AcpSchema.CreateElicitationResponse> createElicitation(
+			AcpSchema.CreateElicitationRequest request) {
+		return agent.createElicitation(request);
+	}
+
+	@Override
+	public Mono<Void> completeElicitation(AcpSchema.CompleteElicitationNotification notification) {
+		return agent.completeElicitation(notification);
+	}
+
+	@Override
 	public NegotiatedCapabilities getClientCapabilities() {
 		return agent.getClientCapabilities();
 	}

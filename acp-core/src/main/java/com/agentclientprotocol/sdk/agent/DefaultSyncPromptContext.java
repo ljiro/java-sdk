@@ -81,6 +81,17 @@ class DefaultSyncPromptContext implements SyncPromptContext {
 	}
 
 	@Override
+	public AcpSchema.CreateElicitationResponse createElicitation(
+			AcpSchema.CreateElicitationRequest request) {
+		return asyncContext.createElicitation(request).block();
+	}
+
+	@Override
+	public void completeElicitation(AcpSchema.CompleteElicitationNotification notification) {
+		asyncContext.completeElicitation(notification).block();
+	}
+
+	@Override
 	public NegotiatedCapabilities getClientCapabilities() {
 		return asyncContext.getClientCapabilities();
 	}

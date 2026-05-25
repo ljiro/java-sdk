@@ -453,6 +453,26 @@ public interface AcpClient {
 		}
 
 		/**
+		 * Adds a typed handler for elicitation requests from the agent.
+		 * The agent uses elicitation to request structured user input via forms.
+		 *
+		 * @param handler The typed handler function that processes elicitation requests
+		 * @return This builder instance for method chaining
+		 * @throws IllegalArgumentException if handler is null
+		 */
+		public AsyncSpec createElicitationHandler(
+				Function<AcpSchema.CreateElicitationRequest, Mono<AcpSchema.CreateElicitationResponse>> handler) {
+			Assert.notNull(handler, "Create elicitation handler must not be null");
+			AcpClientSession.RequestHandler<AcpSchema.CreateElicitationResponse> rawHandler = params -> {
+				AcpSchema.CreateElicitationRequest request = transport.unmarshalFrom(params,
+						new TypeRef<AcpSchema.CreateElicitationRequest>() {});
+				return handler.apply(request);
+			};
+			this.requestHandlers.put(AcpSchema.METHOD_ELICITATION_CREATE, rawHandler);
+			return this;
+		}
+
+		/**
 		 * Adds a consumer to be notified when session update notifications are received
 		 * from the agent. Session updates include agent thoughts, message chunks, and
 		 * other streaming content during prompt processing.
@@ -830,6 +850,27 @@ public interface AcpClient {
 				return handler.apply(request);
 			};
 			this.requestHandlers.put(AcpSchema.METHOD_TERMINAL_KILL, fromSync(rawHandler));
+			return this;
+		}
+
+		/**
+		 * Adds a typed handler for elicitation requests from the agent.
+		 * The agent uses elicitation to request structured user input via forms.
+		 *
+		 * @param handler The typed handler function that processes elicitation requests
+		 * @return This builder instance for method chaining
+		 * @throws IllegalArgumentException if handler is null
+		 */
+		public SyncSpec createElicitationHandler(
+				Function<AcpSchema.CreateElicitationRequest, AcpSchema.CreateElicitationResponse> handler) {
+			Assert.notNull(handler, "Create elicitation handler must not be null");
+			SyncRequestHandler<AcpSchema.CreateElicitationResponse> rawHandler = params -> {
+				logger.debug("createElicitation request params: {}", params);
+				AcpSchema.CreateElicitationRequest request = transport.unmarshalFrom(params,
+						new TypeRef<AcpSchema.CreateElicitationRequest>() {});
+				return handler.apply(request);
+			};
+			this.requestHandlers.put(AcpSchema.METHOD_ELICITATION_CREATE, fromSync(rawHandler));
 			return this;
 		}
 

@@ -10,6 +10,7 @@ import com.agentclientprotocol.sdk.spec.AcpSchema.ClientCapabilities;
 import com.agentclientprotocol.sdk.spec.AcpSchema.FileSystemCapability;
 import com.agentclientprotocol.sdk.spec.AcpSchema.McpCapabilities;
 import com.agentclientprotocol.sdk.spec.AcpSchema.PromptCapabilities;
+import com.agentclientprotocol.sdk.spec.AcpSchema.ElicitationCapabilities;
 import com.agentclientprotocol.sdk.spec.AcpSchema.SessionCapabilities;
 
 /**
@@ -60,6 +61,13 @@ public final class NegotiatedCapabilities {
 
 	private final boolean terminal;
 
+	// Client elicitation capabilities
+	private final boolean elicitation;
+
+	private final boolean elicitationForm;
+
+	private final boolean elicitationUrl;
+
 	// Agent capabilities (what agent offers to client)
 	private final boolean loadSession;
 
@@ -83,6 +91,9 @@ public final class NegotiatedCapabilities {
 		this.readTextFile = builder.readTextFile;
 		this.writeTextFile = builder.writeTextFile;
 		this.terminal = builder.terminal;
+		this.elicitation = builder.elicitation;
+		this.elicitationForm = builder.elicitationForm;
+		this.elicitationUrl = builder.elicitationUrl;
 		this.loadSession = builder.loadSession;
 		this.listSessions = builder.listSessions;
 		this.closeSession = builder.closeSession;
@@ -113,6 +124,13 @@ public final class NegotiatedCapabilities {
 		}
 
 		builder.terminal(Boolean.TRUE.equals(caps.terminal()));
+
+		ElicitationCapabilities elicit = caps.elicitation();
+		if (elicit != null) {
+			builder.elicitation(true);
+			builder.elicitationForm(elicit.form() != null);
+			builder.elicitationUrl(elicit.url() != null);
+		}
 
 		return builder.build();
 	}
@@ -208,6 +226,40 @@ public final class NegotiatedCapabilities {
 	public void requireTerminal() {
 		if (!terminal) {
 			throw new AcpCapabilityException("terminal");
+		}
+	}
+
+	/**
+	 * Returns true if the client supports elicitation (any mode).
+	 * @return true if elicitation capability was advertised
+	 */
+	public boolean supportsElicitation() {
+		return elicitation;
+	}
+
+	/**
+	 * Returns true if the client supports form-based elicitation.
+	 * @return true if elicitation.form capability was advertised
+	 */
+	public boolean supportsElicitationForm() {
+		return elicitationForm;
+	}
+
+	/**
+	 * Returns true if the client supports URL-based elicitation.
+	 * @return true if elicitation.url capability was advertised
+	 */
+	public boolean supportsElicitationUrl() {
+		return elicitationUrl;
+	}
+
+	/**
+	 * Requires elicitation capability, throwing if not supported.
+	 * @throws AcpCapabilityException if the client doesn't support elicitation
+	 */
+	public void requireElicitation() {
+		if (!elicitation) {
+			throw new AcpCapabilityException("elicitation");
 		}
 	}
 
@@ -350,7 +402,9 @@ public final class NegotiatedCapabilities {
 	@Override
 	public String toString() {
 		return "NegotiatedCapabilities{" + "readTextFile=" + readTextFile + ", writeTextFile=" + writeTextFile
-				+ ", terminal=" + terminal + ", loadSession=" + loadSession + ", listSessions=" + listSessions
+				+ ", terminal=" + terminal + ", elicitation=" + elicitation + ", elicitationForm="
+				+ elicitationForm + ", elicitationUrl=" + elicitationUrl + ", loadSession=" + loadSession
+				+ ", listSessions=" + listSessions
 				+ ", closeSession=" + closeSession + ", resumeSession=" + resumeSession + ", imageContent="
 				+ imageContent + ", audioContent=" + audioContent + ", embeddedContext=" + embeddedContext
 				+ ", mcpHttp=" + mcpHttp + ", mcpSse=" + mcpSse + '}';
@@ -366,6 +420,12 @@ public final class NegotiatedCapabilities {
 		private boolean writeTextFile = false;
 
 		private boolean terminal = false;
+
+		private boolean elicitation = false;
+
+		private boolean elicitationForm = false;
+
+		private boolean elicitationUrl = false;
 
 		private boolean loadSession = false;
 
@@ -397,6 +457,21 @@ public final class NegotiatedCapabilities {
 
 		public Builder terminal(boolean value) {
 			this.terminal = value;
+			return this;
+		}
+
+		public Builder elicitation(boolean value) {
+			this.elicitation = value;
+			return this;
+		}
+
+		public Builder elicitationForm(boolean value) {
+			this.elicitationForm = value;
+			return this;
+		}
+
+		public Builder elicitationUrl(boolean value) {
+			this.elicitationUrl = value;
 			return this;
 		}
 

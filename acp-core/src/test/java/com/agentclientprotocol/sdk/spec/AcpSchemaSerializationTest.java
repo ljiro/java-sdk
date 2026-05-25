@@ -378,6 +378,133 @@ class AcpSchemaSerializationTest {
 		assertThat(deserialized.meta().get("custom/field")).isEqualTo("value");
 	}
 
+	// ---------------------------
+	// Elicitation Serialization
+	// ---------------------------
+
+	@Test
+	void elicitationSchemaRoundTrip() throws IOException {
+		var schema = new AcpSchema.ElicitationSchema(
+				Map.of("name", AcpSchema.StringPropertySchema.text("Your Name"),
+						"strategy", AcpSchema.StringPropertySchema.singleSelect("Strategy",
+								List.of(new AcpSchema.EnumOption("fast", "Fast"),
+										new AcpSchema.EnumOption("safe", "Safe")))),
+				List.of("name"));
+
+		String json = jsonMapper.writeValueAsString(schema);
+		assertThat(json).contains("\"type\":\"object\"");
+		assertThat(json).contains("\"required\"");
+
+		AcpSchema.ElicitationSchema deserialized = jsonMapper.readValue(json,
+				new TypeRef<AcpSchema.ElicitationSchema>() {
+				});
+
+		assertThat(deserialized.type()).isEqualTo("object");
+		assertThat(deserialized.properties()).hasSize(2);
+		assertThat(deserialized.required()).containsExactly("name");
+		assertThat(deserialized.properties().get("name")).isInstanceOf(AcpSchema.StringPropertySchema.class);
+		assertThat(deserialized.properties().get("strategy")).isInstanceOf(AcpSchema.StringPropertySchema.class);
+
+		AcpSchema.StringPropertySchema strategy = (AcpSchema.StringPropertySchema) deserialized.properties()
+				.get("strategy");
+		assertThat(strategy.oneOf()).hasSize(2);
+		assertThat(strategy.oneOf().get(0).constValue()).isEqualTo("fast");
+		assertThat(strategy.oneOf().get(0).title()).isEqualTo("Fast");
+	}
+
+	@Test
+	void elicitationPropertySchemaPolymorphism() throws IOException {
+		// All 5 property types should round-trip correctly
+		Map<String, AcpSchema.ElicitationPropertySchema> props = Map.of(
+				"text", new AcpSchema.StringPropertySchema("string", "Name", null, "default", null, null,
+						null, null, null, null),
+				"count", new AcpSchema.IntegerPropertySchema("integer", "Count", null, 5L, 1L, 100L),
+				"ratio", new AcpSchema.NumberPropertySchema("number", "Ratio", null, 0.5, 0.0, 1.0),
+				"agree", new AcpSchema.BooleanPropertySchema("boolean", "Agree?", null, false),
+				"tags", new AcpSchema.MultiSelectPropertySchema("array", "Tags", null, null,
+						new AcpSchema.UntitledMultiSelectItems("string", List.of("a", "b", "c")),
+						null, null));
+
+		var schema = new AcpSchema.ElicitationSchema("object", props, null, null, null);
+		String json = jsonMapper.writeValueAsString(schema);
+
+		AcpSchema.ElicitationSchema deserialized = jsonMapper.readValue(json,
+				new TypeRef<AcpSchema.ElicitationSchema>() {
+				});
+
+		assertThat(deserialized.properties().get("text")).isInstanceOf(AcpSchema.StringPropertySchema.class);
+		assertThat(deserialized.properties().get("count")).isInstanceOf(AcpSchema.IntegerPropertySchema.class);
+		assertThat(deserialized.properties().get("ratio")).isInstanceOf(AcpSchema.NumberPropertySchema.class);
+		assertThat(deserialized.properties().get("agree")).isInstanceOf(AcpSchema.BooleanPropertySchema.class);
+		assertThat(deserialized.properties().get("tags")).isInstanceOf(AcpSchema.MultiSelectPropertySchema.class);
+	}
+
+	@Test
+	void createElicitationRequestFormMode() throws IOException {
+		var request = AcpSchema.CreateElicitationRequest.form("sess-1", "Pick a strategy",
+				new AcpSchema.ElicitationSchema(Map.of(), null));
+
+		String json = jsonMapper.writeValueAsString(request);
+		assertThat(json).contains("\"mode\":\"form\"");
+		assertThat(json).contains("\"sessionId\":\"sess-1\"");
+		assertThat(json).contains("\"requestedSchema\"");
+
+		AcpSchema.CreateElicitationRequest deserialized = jsonMapper.readValue(json,
+				new TypeRef<AcpSchema.CreateElicitationRequest>() {
+				});
+
+		assertThat(deserialized.mode()).isEqualTo("form");
+		assertThat(deserialized.sessionId()).isEqualTo("sess-1");
+		assertThat(deserialized.requestedSchema()).isNotNull();
+		assertThat(deserialized.url()).isNull();
+	}
+
+	@Test
+	void createElicitationResponseAccept() throws IOException {
+		var response = AcpSchema.CreateElicitationResponse.accept(
+				Map.of("strategy", "fast", "count", 3));
+
+		String json = jsonMapper.writeValueAsString(response);
+
+		AcpSchema.CreateElicitationResponse deserialized = jsonMapper.readValue(json,
+				new TypeRef<AcpSchema.CreateElicitationResponse>() {
+				});
+
+		assertThat(deserialized.action()).isEqualTo(AcpSchema.ElicitationAction.ACCEPT);
+		assertThat(deserialized.content()).containsEntry("strategy", "fast");
+		assertThat(deserialized.content()).containsEntry("count", 3);
+	}
+
+	@Test
+	void createElicitationResponseDecline() throws IOException {
+		var response = AcpSchema.CreateElicitationResponse.decline();
+		String json = jsonMapper.writeValueAsString(response);
+
+		AcpSchema.CreateElicitationResponse deserialized = jsonMapper.readValue(json,
+				new TypeRef<AcpSchema.CreateElicitationResponse>() {
+				});
+
+		assertThat(deserialized.action()).isEqualTo(AcpSchema.ElicitationAction.DECLINE);
+		assertThat(deserialized.content()).isNull();
+	}
+
+	@Test
+	void elicitationCapabilitiesOnClientCapabilities() throws IOException {
+		var caps = new AcpSchema.ClientCapabilities(
+				new AcpSchema.FileSystemCapability(true, true), true,
+				new AcpSchema.ElicitationCapabilities(), null);
+
+		String json = jsonMapper.writeValueAsString(caps);
+		assertThat(json).contains("\"elicitation\"");
+
+		AcpSchema.ClientCapabilities deserialized = jsonMapper.readValue(json,
+				new TypeRef<AcpSchema.ClientCapabilities>() {
+				});
+
+		assertThat(deserialized.elicitation()).isNotNull();
+		assertThat(deserialized.elicitation().form()).isNotNull();
+	}
+
 	@Test
 	void metaFieldRoundTripFromGoldenFile() throws IOException {
 		// Read golden file and verify round-trip
