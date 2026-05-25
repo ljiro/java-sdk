@@ -249,6 +249,26 @@ public interface AcpAgent {
 	}
 
 	/**
+	 * Functional interface for handling fork session requests.
+	 */
+	@FunctionalInterface
+	interface ForkSessionHandler {
+
+		Mono<AcpSchema.ForkSessionResponse> handle(AcpSchema.ForkSessionRequest request);
+
+	}
+
+	/**
+	 * Functional interface for handling set config option requests.
+	 */
+	@FunctionalInterface
+	interface SetSessionConfigOptionHandler {
+
+		Mono<AcpSchema.SetSessionConfigOptionResponse> handle(AcpSchema.SetSessionConfigOptionRequest request);
+
+	}
+
+	/**
 	 * Functional interface for handling cancel notifications.
 	 */
 	@FunctionalInterface
@@ -398,6 +418,26 @@ public interface AcpAgent {
 	}
 
 	/**
+	 * Synchronous functional interface for handling fork session requests.
+	 */
+	@FunctionalInterface
+	interface SyncForkSessionHandler {
+
+		AcpSchema.ForkSessionResponse handle(AcpSchema.ForkSessionRequest request);
+
+	}
+
+	/**
+	 * Synchronous functional interface for handling set config option requests.
+	 */
+	@FunctionalInterface
+	interface SyncSetSessionConfigOptionHandler {
+
+		AcpSchema.SetSessionConfigOptionResponse handle(AcpSchema.SetSessionConfigOptionRequest request);
+
+	}
+
+	/**
 	 * Synchronous functional interface for handling cancel notifications.
 	 * Returns void instead of Mono for use with sync agents.
 	 */
@@ -436,6 +476,10 @@ public interface AcpAgent {
 		private CloseSessionHandler closeSessionHandler;
 
 		private ResumeSessionHandler resumeSessionHandler;
+
+		private ForkSessionHandler forkSessionHandler;
+
+		private SetSessionConfigOptionHandler setSessionConfigOptionHandler;
 
 		private CancelHandler cancelHandler;
 
@@ -556,6 +600,26 @@ public interface AcpAgent {
 		}
 
 		/**
+		 * Sets the handler for fork session requests.
+		 * @param handler The fork session handler
+		 * @return This builder for chaining
+		 */
+		public AsyncAgentBuilder forkSessionHandler(ForkSessionHandler handler) {
+			this.forkSessionHandler = handler;
+			return this;
+		}
+
+		/**
+		 * Sets the handler for set config option requests.
+		 * @param handler The set config option handler
+		 * @return This builder for chaining
+		 */
+		public AsyncAgentBuilder setSessionConfigOptionHandler(SetSessionConfigOptionHandler handler) {
+			this.setSessionConfigOptionHandler = handler;
+			return this;
+		}
+
+		/**
 		 * Sets the handler for cancel notifications.
 		 * @param handler The cancel handler
 		 * @return This builder for chaining
@@ -572,7 +636,8 @@ public interface AcpAgent {
 		public AcpAsyncAgent build() {
 			return new DefaultAcpAsyncAgent(transport, requestTimeout, initializeHandler, authenticateHandler,
 					newSessionHandler, loadSessionHandler, promptHandler, setSessionModeHandler, setSessionModelHandler,
-					listSessionsHandler, closeSessionHandler, resumeSessionHandler, cancelHandler);
+					listSessionsHandler, closeSessionHandler, resumeSessionHandler, forkSessionHandler,
+					setSessionConfigOptionHandler, cancelHandler);
 		}
 
 	}
@@ -716,6 +781,16 @@ public interface AcpAgent {
 			return this;
 		}
 
+		public SyncAgentBuilder forkSessionHandler(SyncForkSessionHandler handler) {
+			asyncBuilder.forkSessionHandler(fromSync(handler));
+			return this;
+		}
+
+		public SyncAgentBuilder setSessionConfigOptionHandler(SyncSetSessionConfigOptionHandler handler) {
+			asyncBuilder.setSessionConfigOptionHandler(fromSync(handler));
+			return this;
+		}
+
 		/**
 		 * Sets the synchronous handler for cancel notifications.
 		 * @param handler The sync cancel handler (returns void)
@@ -815,6 +890,22 @@ public interface AcpAgent {
 		}
 
 		private static ResumeSessionHandler fromSync(SyncResumeSessionHandler syncHandler) {
+			if (syncHandler == null) {
+				return null;
+			}
+			return request -> Mono.fromCallable(() -> syncHandler.handle(request))
+				.subscribeOn(SYNC_HANDLER_SCHEDULER);
+		}
+
+		private static ForkSessionHandler fromSync(SyncForkSessionHandler syncHandler) {
+			if (syncHandler == null) {
+				return null;
+			}
+			return request -> Mono.fromCallable(() -> syncHandler.handle(request))
+				.subscribeOn(SYNC_HANDLER_SCHEDULER);
+		}
+
+		private static SetSessionConfigOptionHandler fromSync(SyncSetSessionConfigOptionHandler syncHandler) {
 			if (syncHandler == null) {
 				return null;
 			}

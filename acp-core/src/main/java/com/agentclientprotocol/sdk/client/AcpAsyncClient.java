@@ -114,6 +114,12 @@ public class AcpAsyncClient {
 	private static final TypeRef<AcpSchema.ResumeSessionResponse> RESUME_SESSION_RESPONSE_TYPE_REF = new TypeRef<>() {
 	};
 
+	private static final TypeRef<AcpSchema.ForkSessionResponse> FORK_SESSION_RESPONSE_TYPE_REF = new TypeRef<>() {
+	};
+
+	private static final TypeRef<AcpSchema.SetSessionConfigOptionResponse> SET_SESSION_CONFIG_OPTION_RESPONSE_TYPE_REF = new TypeRef<>() {
+	};
+
 	private static final TypeRef<AcpSchema.PromptResponse> PROMPT_RESPONSE_TYPE_REF = new TypeRef<>() {
 	};
 
@@ -377,6 +383,33 @@ public class AcpAsyncClient {
 		logger.debug("Resuming session: {}", resumeSessionRequest.sessionId());
 		return session.sendRequest(AcpSchema.METHOD_SESSION_RESUME, resumeSessionRequest,
 				RESUME_SESSION_RESPONSE_TYPE_REF);
+	}
+
+	/**
+	 * Forks an existing session, creating a new session branched from it.
+	 * @param forkSessionRequest the fork request with source session ID and cwd
+	 * @return a Mono emitting the fork response with the new session ID
+	 * @see AcpSchema#METHOD_SESSION_FORK
+	 */
+	public Mono<AcpSchema.ForkSessionResponse> forkSession(AcpSchema.ForkSessionRequest forkSessionRequest) {
+		Assert.notNull(forkSessionRequest, "Fork session request must not be null");
+		logger.debug("Forking session: {}", forkSessionRequest.sessionId());
+		return session.sendRequest(AcpSchema.METHOD_SESSION_FORK, forkSessionRequest,
+				FORK_SESSION_RESPONSE_TYPE_REF);
+	}
+
+	/**
+	 * Sets a configuration option for a session.
+	 * @param request the config option request with session ID, config ID, and value
+	 * @return a Mono emitting the response with the full config state
+	 * @see AcpSchema#METHOD_SESSION_SET_CONFIG_OPTION
+	 */
+	public Mono<AcpSchema.SetSessionConfigOptionResponse> setSessionConfigOption(
+			AcpSchema.SetSessionConfigOptionRequest request) {
+		Assert.notNull(request, "Set config option request must not be null");
+		logger.debug("Setting config option {} for session: {}", request.configId(), request.sessionId());
+		return session.sendRequest(AcpSchema.METHOD_SESSION_SET_CONFIG_OPTION, request,
+				SET_SESSION_CONFIG_OPTION_RESPONSE_TYPE_REF);
 	}
 
 	// --------------------------

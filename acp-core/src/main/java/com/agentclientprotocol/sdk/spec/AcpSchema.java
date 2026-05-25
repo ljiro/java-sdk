@@ -101,6 +101,10 @@ public final class AcpSchema {
 
 	public static final String METHOD_SESSION_RESUME = "session/resume";
 
+	public static final String METHOD_SESSION_FORK = "session/fork";
+
+	public static final String METHOD_SESSION_SET_CONFIG_OPTION = "session/set_config_option";
+
 	// ---------------------------
 	// Method Names (Client Methods - agent calls these)
 	// ---------------------------
@@ -494,6 +498,76 @@ public final class AcpSchema {
 			@JsonProperty("_meta") Map<String, Object> meta) {
 		public ResumeSessionResponse(SessionModeState modes, SessionModelState models) {
 			this(modes, models, null);
+		}
+	}
+
+	/**
+	 * Fork session request - creates a new session branched from an existing one
+	 */
+	@UnstableAcpApi
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	public record ForkSessionRequest(@JsonProperty("sessionId") String sessionId,
+			@JsonProperty("cwd") String cwd,
+			@JsonProperty("mcpServers") List<McpServer> mcpServers,
+			@JsonProperty("_meta") Map<String, Object> meta) {
+		public ForkSessionRequest(String sessionId, String cwd, List<McpServer> mcpServers) {
+			this(sessionId, cwd, mcpServers, null);
+		}
+	}
+
+	/**
+	 * Fork session response - returns the new forked session ID
+	 */
+	@UnstableAcpApi
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	public record ForkSessionResponse(@JsonProperty("sessionId") String sessionId,
+			@JsonProperty("modes") SessionModeState modes, @JsonProperty("models") SessionModelState models,
+			@JsonProperty("configOptions") List<SessionConfigOption> configOptions,
+			@JsonProperty("_meta") Map<String, Object> meta) {
+		public ForkSessionResponse(String sessionId, SessionModeState modes, SessionModelState models) {
+			this(sessionId, modes, models, null, null);
+		}
+	}
+
+	/**
+	 * Set session config option request - changes a configuration value
+	 */
+	@UnstableAcpApi
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	public record SetSessionConfigOptionRequest(@JsonProperty("sessionId") String sessionId,
+			@JsonProperty("configId") String configId, @JsonProperty("value") Object value,
+			@JsonProperty("type") String type,
+			@JsonProperty("_meta") Map<String, Object> meta) {
+
+		/**
+		 * Creates a request to set a select-type config option.
+		 */
+		public static SetSessionConfigOptionRequest select(String sessionId, String configId, String value) {
+			return new SetSessionConfigOptionRequest(sessionId, configId, value, null, null);
+		}
+
+		/**
+		 * Creates a request to set a boolean-type config option.
+		 */
+		public static SetSessionConfigOptionRequest bool(String sessionId, String configId, boolean value) {
+			return new SetSessionConfigOptionRequest(sessionId, configId, value, "boolean", null);
+		}
+	}
+
+	/**
+	 * Set session config option response - returns full config state
+	 */
+	@UnstableAcpApi
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	public record SetSessionConfigOptionResponse(
+			@JsonProperty("configOptions") List<SessionConfigOption> configOptions,
+			@JsonProperty("_meta") Map<String, Object> meta) {
+		public SetSessionConfigOptionResponse(List<SessionConfigOption> configOptions) {
+			this(configOptions, null);
 		}
 	}
 
@@ -960,7 +1034,11 @@ public final class AcpSchema {
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public record SessionCapabilities(@JsonProperty("list") Object list, @JsonProperty("close") Object close,
-			@JsonProperty("resume") Object resume) {
+			@JsonProperty("resume") Object resume,
+			@UnstableAcpApi @JsonProperty("fork") Object fork) {
+		public SessionCapabilities(Object list, Object close, Object resume) {
+			this(list, close, resume, null);
+		}
 	}
 
 	/**
@@ -1037,6 +1115,84 @@ public final class AcpSchema {
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public record ModelInfo(@JsonProperty("modelId") String modelId, @JsonProperty("name") String name,
 			@JsonProperty("description") String description) {
+	}
+
+	// ---------------------------
+	// Session Config Types (UNSTABLE)
+	// ---------------------------
+
+	/**
+	 * Session config option - a configurable setting exposed by the agent.
+	 * Discriminated by type: "select" or "boolean".
+	 */
+	@UnstableAcpApi
+	@JsonTypeInfo(use = JsonTypeInfo.Id.NAME, property = "type")
+	@JsonSubTypes({ @JsonSubTypes.Type(value = SessionConfigSelect.class, name = "select"),
+			@JsonSubTypes.Type(value = SessionConfigBoolean.class, name = "boolean") })
+	public interface SessionConfigOption {
+
+	}
+
+	/**
+	 * Select-type config option - a dropdown with named values.
+	 */
+	@UnstableAcpApi
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	public record SessionConfigSelect(@JsonProperty("type") String type, @JsonProperty("id") String id,
+			@JsonProperty("name") String name, @JsonProperty("description") String description,
+			@JsonProperty("category") String category,
+			@JsonProperty("currentValue") String currentValue,
+			@JsonProperty("options") List<SessionConfigSelectOption> options,
+			@JsonProperty("_meta") Map<String, Object> meta) implements SessionConfigOption {
+		public SessionConfigSelect(String id, String name, String currentValue,
+				List<SessionConfigSelectOption> options) {
+			this("select", id, name, null, null, currentValue, options, null);
+		}
+	}
+
+	/**
+	 * Boolean-type config option - a toggle.
+	 */
+	@UnstableAcpApi
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	public record SessionConfigBoolean(@JsonProperty("type") String type, @JsonProperty("id") String id,
+			@JsonProperty("name") String name, @JsonProperty("description") String description,
+			@JsonProperty("category") String category,
+			@JsonProperty("currentValue") Boolean currentValue,
+			@JsonProperty("_meta") Map<String, Object> meta) implements SessionConfigOption {
+		public SessionConfigBoolean(String id, String name, Boolean currentValue) {
+			this("boolean", id, name, null, null, currentValue, null);
+		}
+	}
+
+	/**
+	 * A selectable option within a select-type config option.
+	 */
+	@UnstableAcpApi
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	public record SessionConfigSelectOption(@JsonProperty("value") String value,
+			@JsonProperty("name") String name, @JsonProperty("description") String description,
+			@JsonProperty("_meta") Map<String, Object> meta) {
+		public SessionConfigSelectOption(String value, String name) {
+			this(value, name, null, null);
+		}
+	}
+
+	/**
+	 * Config option update - pushed by agent via session/update notification.
+	 */
+	@UnstableAcpApi
+	@JsonIgnoreProperties(ignoreUnknown = true)
+	@JsonInclude(JsonInclude.Include.NON_NULL)
+	public record ConfigOptionUpdate(@JsonProperty("sessionUpdate") String sessionUpdate,
+			@JsonProperty("configOptions") List<SessionConfigOption> configOptions,
+			@JsonProperty("_meta") Map<String, Object> meta) implements SessionUpdate {
+		public ConfigOptionUpdate(String sessionUpdate, List<SessionConfigOption> configOptions) {
+			this(sessionUpdate, configOptions, null);
+		}
 	}
 
 	// ---------------------------
@@ -1166,7 +1322,8 @@ public final class AcpSchema {
 			@JsonSubTypes.Type(value = Plan.class, name = "plan"),
 			@JsonSubTypes.Type(value = AvailableCommandsUpdate.class, name = "available_commands_update"),
 			@JsonSubTypes.Type(value = CurrentModeUpdate.class, name = "current_mode_update"),
-			@JsonSubTypes.Type(value = UsageUpdate.class, name = "usage_update") })
+			@JsonSubTypes.Type(value = UsageUpdate.class, name = "usage_update"),
+			@JsonSubTypes.Type(value = ConfigOptionUpdate.class, name = "config_option_update") })
 	public interface SessionUpdate {
 
 	}

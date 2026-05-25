@@ -77,6 +77,8 @@ public final class NegotiatedCapabilities {
 
 	private final boolean resumeSession;
 
+	private final boolean forkSession;
+
 	private final boolean imageContent;
 
 	private final boolean audioContent;
@@ -98,6 +100,7 @@ public final class NegotiatedCapabilities {
 		this.listSessions = builder.listSessions;
 		this.closeSession = builder.closeSession;
 		this.resumeSession = builder.resumeSession;
+		this.forkSession = builder.forkSession;
 		this.imageContent = builder.imageContent;
 		this.audioContent = builder.audioContent;
 		this.embeddedContext = builder.embeddedContext;
@@ -153,6 +156,7 @@ public final class NegotiatedCapabilities {
 			builder.listSessions(sc.list() != null);
 			builder.closeSession(sc.close() != null);
 			builder.resumeSession(sc.resume() != null);
+			builder.forkSession(sc.fork() != null);
 		}
 
 		PromptCapabilities prompt = caps.promptCapabilities();
@@ -300,6 +304,14 @@ public final class NegotiatedCapabilities {
 	}
 
 	/**
+	 * Returns true if the agent supports forking sessions.
+	 * @return true if sessionCapabilities.fork was advertised
+	 */
+	public boolean supportsForkSession() {
+		return forkSession;
+	}
+
+	/**
 	 * Returns true if the agent supports image content in prompts.
 	 * @return true if promptCapabilities.image was advertised
 	 */
@@ -379,6 +391,12 @@ public final class NegotiatedCapabilities {
 		}
 	}
 
+	public void requireForkSession() {
+		if (!forkSession) {
+			throw new AcpCapabilityException("sessionCapabilities.fork");
+		}
+	}
+
 	/**
 	 * Requires image content capability, throwing if not supported.
 	 * @throws AcpCapabilityException if the agent doesn't support this capability
@@ -405,7 +423,8 @@ public final class NegotiatedCapabilities {
 				+ ", terminal=" + terminal + ", elicitation=" + elicitation + ", elicitationForm="
 				+ elicitationForm + ", elicitationUrl=" + elicitationUrl + ", loadSession=" + loadSession
 				+ ", listSessions=" + listSessions
-				+ ", closeSession=" + closeSession + ", resumeSession=" + resumeSession + ", imageContent="
+				+ ", closeSession=" + closeSession + ", resumeSession=" + resumeSession + ", forkSession="
+				+ forkSession + ", imageContent="
 				+ imageContent + ", audioContent=" + audioContent + ", embeddedContext=" + embeddedContext
 				+ ", mcpHttp=" + mcpHttp + ", mcpSse=" + mcpSse + '}';
 	}
@@ -434,6 +453,8 @@ public final class NegotiatedCapabilities {
 		private boolean closeSession = false;
 
 		private boolean resumeSession = false;
+
+		private boolean forkSession = false;
 
 		private boolean imageContent = false;
 
@@ -492,6 +513,11 @@ public final class NegotiatedCapabilities {
 
 		public Builder resumeSession(boolean value) {
 			this.resumeSession = value;
+			return this;
+		}
+
+		public Builder forkSession(boolean value) {
+			this.forkSession = value;
 			return this;
 		}
 

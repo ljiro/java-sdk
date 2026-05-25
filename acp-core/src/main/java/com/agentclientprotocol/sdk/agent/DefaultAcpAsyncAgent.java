@@ -58,6 +58,10 @@ class DefaultAcpAsyncAgent implements AcpAsyncAgent {
 
 	private final AcpAgent.ResumeSessionHandler resumeSessionHandler;
 
+	private final AcpAgent.ForkSessionHandler forkSessionHandler;
+
+	private final AcpAgent.SetSessionConfigOptionHandler setSessionConfigOptionHandler;
+
 	private final AcpAgent.CancelHandler cancelHandler;
 
 	private volatile AcpAgentSession session;
@@ -73,7 +77,9 @@ class DefaultAcpAsyncAgent implements AcpAsyncAgent {
 			AcpAgent.PromptHandler promptHandler, AcpAgent.SetSessionModeHandler setSessionModeHandler,
 			AcpAgent.SetSessionModelHandler setSessionModelHandler,
 			AcpAgent.ListSessionsHandler listSessionsHandler, AcpAgent.CloseSessionHandler closeSessionHandler,
-			AcpAgent.ResumeSessionHandler resumeSessionHandler, AcpAgent.CancelHandler cancelHandler) {
+			AcpAgent.ResumeSessionHandler resumeSessionHandler, AcpAgent.ForkSessionHandler forkSessionHandler,
+			AcpAgent.SetSessionConfigOptionHandler setSessionConfigOptionHandler,
+			AcpAgent.CancelHandler cancelHandler) {
 		this.transport = transport;
 		this.requestTimeout = requestTimeout;
 		this.initializeHandler = initializeHandler;
@@ -86,6 +92,8 @@ class DefaultAcpAsyncAgent implements AcpAsyncAgent {
 		this.listSessionsHandler = listSessionsHandler;
 		this.closeSessionHandler = closeSessionHandler;
 		this.resumeSessionHandler = resumeSessionHandler;
+		this.forkSessionHandler = forkSessionHandler;
+		this.setSessionConfigOptionHandler = setSessionConfigOptionHandler;
 		this.cancelHandler = cancelHandler;
 	}
 
@@ -201,6 +209,26 @@ class DefaultAcpAsyncAgent implements AcpAsyncAgent {
 							new TypeRef<AcpSchema.ResumeSessionRequest>() {
 							});
 					return resumeSessionHandler.handle(request).cast(Object.class);
+				});
+			}
+
+			// Fork session handler
+			if (forkSessionHandler != null) {
+				requestHandlers.put(AcpSchema.METHOD_SESSION_FORK, params -> {
+					AcpSchema.ForkSessionRequest request = transport.unmarshalFrom(params,
+							new TypeRef<AcpSchema.ForkSessionRequest>() {
+							});
+					return forkSessionHandler.handle(request).cast(Object.class);
+				});
+			}
+
+			// Set config option handler
+			if (setSessionConfigOptionHandler != null) {
+				requestHandlers.put(AcpSchema.METHOD_SESSION_SET_CONFIG_OPTION, params -> {
+					AcpSchema.SetSessionConfigOptionRequest request = transport.unmarshalFrom(params,
+							new TypeRef<AcpSchema.SetSessionConfigOptionRequest>() {
+							});
+					return setSessionConfigOptionHandler.handle(request).cast(Object.class);
 				});
 			}
 

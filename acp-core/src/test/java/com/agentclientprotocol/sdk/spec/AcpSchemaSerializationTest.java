@@ -489,6 +489,80 @@ class AcpSchemaSerializationTest {
 	}
 
 	@Test
+	void forkSessionRequestRoundTrip() throws IOException {
+		var request = new AcpSchema.ForkSessionRequest("sess-parent", "/workspace", List.of());
+
+		String json = jsonMapper.writeValueAsString(request);
+		AcpSchema.ForkSessionRequest deserialized = jsonMapper.readValue(json,
+				new TypeRef<AcpSchema.ForkSessionRequest>() {});
+
+		assertThat(deserialized.sessionId()).isEqualTo("sess-parent");
+		assertThat(deserialized.cwd()).isEqualTo("/workspace");
+	}
+
+	@Test
+	void sessionConfigOptionPolymorphism() throws IOException {
+		AcpSchema.SessionConfigSelect select = new AcpSchema.SessionConfigSelect(
+				"mode", "Mode", "code",
+				List.of(new AcpSchema.SessionConfigSelectOption("ask", "Ask"),
+						new AcpSchema.SessionConfigSelectOption("code", "Code")));
+
+		String json = jsonMapper.writeValueAsString(select);
+		assertThat(json).contains("\"type\":\"select\"");
+
+		AcpSchema.SessionConfigOption deserialized = jsonMapper.readValue(json,
+				new TypeRef<AcpSchema.SessionConfigOption>() {});
+
+		assertThat(deserialized).isInstanceOf(AcpSchema.SessionConfigSelect.class);
+		AcpSchema.SessionConfigSelect asSelect = (AcpSchema.SessionConfigSelect) deserialized;
+		assertThat(asSelect.currentValue()).isEqualTo("code");
+		assertThat(asSelect.options()).hasSize(2);
+	}
+
+	@Test
+	void sessionConfigBooleanRoundTrip() throws IOException {
+		AcpSchema.SessionConfigBoolean toggle = new AcpSchema.SessionConfigBoolean(
+				"thinking", "Enable Thinking", true);
+
+		String json = jsonMapper.writeValueAsString(toggle);
+		AcpSchema.SessionConfigOption deserialized = jsonMapper.readValue(json,
+				new TypeRef<AcpSchema.SessionConfigOption>() {});
+
+		assertThat(deserialized).isInstanceOf(AcpSchema.SessionConfigBoolean.class);
+		assertThat(((AcpSchema.SessionConfigBoolean) deserialized).currentValue()).isTrue();
+	}
+
+	@Test
+	void setSessionConfigOptionRequestSelectMode() throws IOException {
+		var request = AcpSchema.SetSessionConfigOptionRequest.select("sess-1", "mode", "code");
+
+		String json = jsonMapper.writeValueAsString(request);
+		assertThat(json).contains("\"value\":\"code\"");
+		assertThat(json).doesNotContain("\"type\":\"boolean\"");
+
+		AcpSchema.SetSessionConfigOptionRequest deserialized = jsonMapper.readValue(json,
+				new TypeRef<AcpSchema.SetSessionConfigOptionRequest>() {});
+
+		assertThat(deserialized.configId()).isEqualTo("mode");
+		assertThat(deserialized.value()).isEqualTo("code");
+		assertThat(deserialized.type()).isNull();
+	}
+
+	@Test
+	void configOptionUpdateAsSessionUpdate() throws IOException {
+		var update = new AcpSchema.ConfigOptionUpdate("config_option_update",
+				List.of(new AcpSchema.SessionConfigSelect("mode", "Mode", "code",
+						List.of(new AcpSchema.SessionConfigSelectOption("code", "Code")))));
+
+		String json = jsonMapper.writeValueAsString(update);
+		AcpSchema.SessionUpdate deserialized = jsonMapper.readValue(json,
+				new TypeRef<AcpSchema.SessionUpdate>() {});
+
+		assertThat(deserialized).isInstanceOf(AcpSchema.ConfigOptionUpdate.class);
+		assertThat(((AcpSchema.ConfigOptionUpdate) deserialized).configOptions()).hasSize(1);
+	}
+
+	@Test
 	void elicitationCapabilitiesOnClientCapabilities() throws IOException {
 		var caps = new AcpSchema.ClientCapabilities(
 				new AcpSchema.FileSystemCapability(true, true), true,

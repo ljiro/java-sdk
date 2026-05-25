@@ -478,6 +478,48 @@ public abstract class AbstractAcpClientAgentIT {
 	}
 
 	@Test
+	void forkSessionWorks() throws Exception {
+		AcpClientTransport clientTransport = createClientTransport();
+		AcpAgentTransport agentTransport = createAgentTransport();
+
+		try {
+			AcpAsyncAgent agent = AcpAgent.async(agentTransport)
+				.requestTimeout(TIMEOUT)
+				.initializeHandler(request -> Mono
+					.just(new AcpSchema.InitializeResponse(1, new AcpSchema.AgentCapabilities(), List.of())))
+				.newSessionHandler(
+						request -> Mono.just(new AcpSchema.NewSessionResponse("session-original", null, null)))
+				.forkSessionHandler(request -> {
+					assertThat(request.sessionId()).isEqualTo("session-original");
+					return Mono.just(new AcpSchema.ForkSessionResponse("session-forked", null, null));
+				})
+				.build();
+
+			AcpAsyncClient client = AcpClient.async(clientTransport)
+				.requestTimeout(TIMEOUT)
+				.build();
+
+			agent.start().subscribe();
+			Thread.sleep(100);
+			client.initialize(new AcpSchema.InitializeRequest(1, new AcpSchema.ClientCapabilities())).block(TIMEOUT);
+			client.newSession(new AcpSchema.NewSessionRequest("/workspace", List.of())).block(TIMEOUT);
+
+			AcpSchema.ForkSessionResponse forkResp = client
+				.forkSession(new AcpSchema.ForkSessionRequest("session-original", "/workspace", List.of()))
+				.block(TIMEOUT);
+
+			assertThat(forkResp).isNotNull();
+			assertThat(forkResp.sessionId()).isEqualTo("session-forked");
+
+			client.closeGracefully().block(TIMEOUT);
+			agent.closeGracefully().block(TIMEOUT);
+		}
+		finally {
+			closeTransports();
+		}
+	}
+
+	@Test
 	void agentToClientElicitationFormWorks() throws Exception {
 		AcpClientTransport clientTransport = createClientTransport();
 		AcpAgentTransport agentTransport = createAgentTransport();

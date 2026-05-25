@@ -280,6 +280,27 @@ public class AcpSyncClient implements AutoCloseable {
 		return this.delegate.resumeSession(resumeSessionRequest).block();
 	}
 
+	/**
+	 * Forks an existing session, creating a new session branched from it.
+	 * @param forkSessionRequest the fork request with source session ID and cwd
+	 * @return the fork response with the new session ID
+	 * @see AcpSchema#METHOD_SESSION_FORK
+	 */
+	public AcpSchema.ForkSessionResponse forkSession(AcpSchema.ForkSessionRequest forkSessionRequest) {
+		return this.delegate.forkSession(forkSessionRequest).block();
+	}
+
+	/**
+	 * Sets a configuration option for a session.
+	 * @param request the config option request with session ID, config ID, and value
+	 * @return the response with the full config state
+	 * @see AcpSchema#METHOD_SESSION_SET_CONFIG_OPTION
+	 */
+	public AcpSchema.SetSessionConfigOptionResponse setSessionConfigOption(
+			AcpSchema.SetSessionConfigOptionRequest request) {
+		return this.delegate.setSessionConfigOption(request).block();
+	}
+
 	// --------------------------
 	// Prompt Interaction
 	// --------------------------

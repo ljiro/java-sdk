@@ -28,6 +28,7 @@ import com.agentclientprotocol.sdk.agent.support.resolver.ArgumentResolverCompos
 import com.agentclientprotocol.sdk.agent.support.resolver.CancelNotificationResolver;
 import com.agentclientprotocol.sdk.agent.support.resolver.CapabilitiesResolver;
 import com.agentclientprotocol.sdk.agent.support.resolver.CloseSessionRequestResolver;
+import com.agentclientprotocol.sdk.agent.support.resolver.ForkSessionRequestResolver;
 import com.agentclientprotocol.sdk.agent.support.resolver.InitializeRequestResolver;
 import com.agentclientprotocol.sdk.agent.support.resolver.ListSessionsRequestResolver;
 import com.agentclientprotocol.sdk.agent.support.resolver.LoadSessionRequestResolver;
@@ -36,16 +37,19 @@ import com.agentclientprotocol.sdk.agent.support.resolver.PromptContextResolver;
 import com.agentclientprotocol.sdk.agent.support.resolver.PromptRequestResolver;
 import com.agentclientprotocol.sdk.agent.support.resolver.ResumeSessionRequestResolver;
 import com.agentclientprotocol.sdk.agent.support.resolver.SessionIdResolver;
+import com.agentclientprotocol.sdk.agent.support.resolver.SetSessionConfigOptionRequestResolver;
 import com.agentclientprotocol.sdk.agent.support.resolver.SetSessionModeRequestResolver;
 import com.agentclientprotocol.sdk.agent.support.resolver.SetSessionModelRequestResolver;
 import com.agentclientprotocol.sdk.annotation.Cancel;
 import com.agentclientprotocol.sdk.annotation.CloseSession;
+import com.agentclientprotocol.sdk.annotation.ForkSession;
 import com.agentclientprotocol.sdk.annotation.Initialize;
 import com.agentclientprotocol.sdk.annotation.ListSessions;
 import com.agentclientprotocol.sdk.annotation.LoadSession;
 import com.agentclientprotocol.sdk.annotation.NewSession;
 import com.agentclientprotocol.sdk.annotation.Prompt;
 import com.agentclientprotocol.sdk.annotation.ResumeSession;
+import com.agentclientprotocol.sdk.annotation.SetSessionConfigOption;
 import com.agentclientprotocol.sdk.annotation.SetSessionMode;
 import com.agentclientprotocol.sdk.annotation.SetSessionModel;
 import com.agentclientprotocol.sdk.capabilities.NegotiatedCapabilities;
@@ -242,6 +246,20 @@ public class AcpAgentSupport {
 		if (resumeSessionHandler != null) {
 			agentBuilder.resumeSessionHandler(
 					req -> invokeHandler(resumeSessionHandler, req, req.sessionId(), null, null));
+		}
+
+		// ForkSession handler
+		AcpHandlerMethod forkSessionHandler = handlers.get("session/fork");
+		if (forkSessionHandler != null) {
+			agentBuilder.forkSessionHandler(
+					req -> invokeHandler(forkSessionHandler, req, req.sessionId(), null, null));
+		}
+
+		// SetSessionConfigOption handler
+		AcpHandlerMethod setConfigOptionHandler = handlers.get("session/set_config_option");
+		if (setConfigOptionHandler != null) {
+			agentBuilder.setSessionConfigOptionHandler(
+					req -> invokeHandler(setConfigOptionHandler, req, req.sessionId(), null, null));
 		}
 
 		// Cancel handler
@@ -479,6 +497,15 @@ public class AcpAgentSupport {
 					handlers.put("session/resume", new AcpHandlerMethod(beanSupplier, method, "session/resume"));
 					log.debug("Discovered @ResumeSession handler: {}", method.getName());
 				}
+				if (method.isAnnotationPresent(ForkSession.class)) {
+					handlers.put("session/fork", new AcpHandlerMethod(beanSupplier, method, "session/fork"));
+					log.debug("Discovered @ForkSession handler: {}", method.getName());
+				}
+				if (method.isAnnotationPresent(SetSessionConfigOption.class)) {
+					handlers.put("session/set_config_option",
+							new AcpHandlerMethod(beanSupplier, method, "session/set_config_option"));
+					log.debug("Discovered @SetSessionConfigOption handler: {}", method.getName());
+				}
 				if (method.isAnnotationPresent(Cancel.class)) {
 					handlers.put("session/cancel", new AcpHandlerMethod(beanSupplier, method, "session/cancel"));
 					log.debug("Discovered @Cancel handler: {}", method.getName());
@@ -498,6 +525,8 @@ public class AcpAgentSupport {
 			argumentResolvers.addResolver(new ListSessionsRequestResolver());
 			argumentResolvers.addResolver(new CloseSessionRequestResolver());
 			argumentResolvers.addResolver(new ResumeSessionRequestResolver());
+			argumentResolvers.addResolver(new ForkSessionRequestResolver());
+			argumentResolvers.addResolver(new SetSessionConfigOptionRequestResolver());
 			argumentResolvers.addResolver(new CancelNotificationResolver());
 			argumentResolvers.addResolver(new PromptContextResolver());
 			argumentResolvers.addResolver(new SessionIdResolver());
