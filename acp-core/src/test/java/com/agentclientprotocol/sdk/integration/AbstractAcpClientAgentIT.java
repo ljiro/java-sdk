@@ -600,4 +600,124 @@ public abstract class AbstractAcpClientAgentIT {
 		}
 	}
 
+	@Test
+	void agentToClientElicitationDeclineWorks() throws Exception {
+		AcpClientTransport clientTransport = createClientTransport();
+		AcpAgentTransport agentTransport = createAgentTransport();
+
+		try {
+			AtomicReference<AcpSchema.CreateElicitationResponse> elicitationResponse = new AtomicReference<>();
+			CountDownLatch latch = new CountDownLatch(1);
+			AtomicReference<AcpAsyncAgent> agentRef = new AtomicReference<>();
+
+			AcpAsyncAgent agent = AcpAgent.async(agentTransport)
+				.requestTimeout(TIMEOUT)
+				.initializeHandler(request -> Mono
+					.just(new AcpSchema.InitializeResponse(1, new AcpSchema.AgentCapabilities(), List.of())))
+				.newSessionHandler(
+						request -> Mono.just(new AcpSchema.NewSessionResponse("session-decline", null, null)))
+				.promptHandler((request, context) -> {
+					var schema = new AcpSchema.ElicitationSchema(
+							Map.of("name", AcpSchema.StringPropertySchema.text("Name")), null);
+					return agentRef.get()
+						.createElicitation(AcpSchema.CreateElicitationRequest.form(
+								"session-decline", "Enter name:", schema))
+						.doOnNext(response -> {
+							elicitationResponse.set(response);
+							latch.countDown();
+						})
+						.then(Mono.just(new AcpSchema.PromptResponse(AcpSchema.StopReason.END_TURN)));
+				})
+				.build();
+			agentRef.set(agent);
+
+			// Client declines the form
+			AcpAsyncClient client = AcpClient.async(clientTransport)
+				.requestTimeout(TIMEOUT)
+				.createElicitationHandler(req ->
+					Mono.just(AcpSchema.CreateElicitationResponse.decline()))
+				.build();
+
+			agent.start().subscribe();
+			Thread.sleep(100);
+			var caps = new AcpSchema.ClientCapabilities(
+					new AcpSchema.FileSystemCapability(), false,
+					new AcpSchema.ElicitationCapabilities(), null);
+			client.initialize(new AcpSchema.InitializeRequest(1, caps)).block(TIMEOUT);
+			client.newSession(new AcpSchema.NewSessionRequest("/workspace", List.of())).block(TIMEOUT);
+			client.prompt(new AcpSchema.PromptRequest("session-decline",
+					List.of(new AcpSchema.TextContent("test")))).block(TIMEOUT);
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+			assertThat(elicitationResponse.get().action()).isEqualTo(AcpSchema.ElicitationAction.DECLINE);
+			assertThat(elicitationResponse.get().content()).isNull();
+
+			client.closeGracefully().block(TIMEOUT);
+			agent.closeGracefully().block(TIMEOUT);
+		}
+		finally {
+			closeTransports();
+		}
+	}
+
+	@Test
+	void agentToClientElicitationCancelWorks() throws Exception {
+		AcpClientTransport clientTransport = createClientTransport();
+		AcpAgentTransport agentTransport = createAgentTransport();
+
+		try {
+			AtomicReference<AcpSchema.CreateElicitationResponse> elicitationResponse = new AtomicReference<>();
+			CountDownLatch latch = new CountDownLatch(1);
+			AtomicReference<AcpAsyncAgent> agentRef = new AtomicReference<>();
+
+			AcpAsyncAgent agent = AcpAgent.async(agentTransport)
+				.requestTimeout(TIMEOUT)
+				.initializeHandler(request -> Mono
+					.just(new AcpSchema.InitializeResponse(1, new AcpSchema.AgentCapabilities(), List.of())))
+				.newSessionHandler(
+						request -> Mono.just(new AcpSchema.NewSessionResponse("session-cancel", null, null)))
+				.promptHandler((request, context) -> {
+					var schema = new AcpSchema.ElicitationSchema(
+							Map.of("name", AcpSchema.StringPropertySchema.text("Name")), null);
+					return agentRef.get()
+						.createElicitation(AcpSchema.CreateElicitationRequest.form(
+								"session-cancel", "Enter name:", schema))
+						.doOnNext(response -> {
+							elicitationResponse.set(response);
+							latch.countDown();
+						})
+						.then(Mono.just(new AcpSchema.PromptResponse(AcpSchema.StopReason.END_TURN)));
+				})
+				.build();
+			agentRef.set(agent);
+
+			// Client cancels the form
+			AcpAsyncClient client = AcpClient.async(clientTransport)
+				.requestTimeout(TIMEOUT)
+				.createElicitationHandler(req ->
+					Mono.just(AcpSchema.CreateElicitationResponse.cancel()))
+				.build();
+
+			agent.start().subscribe();
+			Thread.sleep(100);
+			var caps = new AcpSchema.ClientCapabilities(
+					new AcpSchema.FileSystemCapability(), false,
+					new AcpSchema.ElicitationCapabilities(), null);
+			client.initialize(new AcpSchema.InitializeRequest(1, caps)).block(TIMEOUT);
+			client.newSession(new AcpSchema.NewSessionRequest("/workspace", List.of())).block(TIMEOUT);
+			client.prompt(new AcpSchema.PromptRequest("session-cancel",
+					List.of(new AcpSchema.TextContent("test")))).block(TIMEOUT);
+
+			assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+			assertThat(elicitationResponse.get().action()).isEqualTo(AcpSchema.ElicitationAction.CANCEL);
+			assertThat(elicitationResponse.get().content()).isNull();
+
+			client.closeGracefully().block(TIMEOUT);
+			agent.closeGracefully().block(TIMEOUT);
+		}
+		finally {
+			closeTransports();
+		}
+	}
+
 }
