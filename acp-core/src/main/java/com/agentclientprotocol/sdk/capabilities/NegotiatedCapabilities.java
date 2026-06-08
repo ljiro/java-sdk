@@ -77,6 +77,10 @@ public final class NegotiatedCapabilities {
 
 	private final boolean resumeSession;
 
+	private final boolean deleteSession;
+
+	private final boolean additionalDirectories;
+
 	private final boolean forkSession;
 
 	private final boolean imageContent;
@@ -100,6 +104,8 @@ public final class NegotiatedCapabilities {
 		this.listSessions = builder.listSessions;
 		this.closeSession = builder.closeSession;
 		this.resumeSession = builder.resumeSession;
+		this.deleteSession = builder.deleteSession;
+		this.additionalDirectories = builder.additionalDirectories;
 		this.forkSession = builder.forkSession;
 		this.imageContent = builder.imageContent;
 		this.audioContent = builder.audioContent;
@@ -156,6 +162,8 @@ public final class NegotiatedCapabilities {
 			builder.listSessions(sc.list() != null);
 			builder.closeSession(sc.close() != null);
 			builder.resumeSession(sc.resume() != null);
+			builder.deleteSession(sc.delete() != null);
+			builder.additionalDirectories(sc.additionalDirectories() != null);
 			builder.forkSession(sc.fork() != null);
 		}
 
@@ -304,6 +312,23 @@ public final class NegotiatedCapabilities {
 	}
 
 	/**
+	 * Returns true if the agent supports deleting sessions.
+	 * @return true if sessionCapabilities.delete was advertised
+	 */
+	public boolean supportsDeleteSession() {
+		return deleteSession;
+	}
+
+	/**
+	 * Returns true if the agent supports additional workspace directories on session
+	 * lifecycle requests (session/new, session/load, session/resume).
+	 * @return true if sessionCapabilities.additionalDirectories was advertised
+	 */
+	public boolean supportsAdditionalDirectories() {
+		return additionalDirectories;
+	}
+
+	/**
 	 * Returns true if the agent supports forking sessions.
 	 * @return true if sessionCapabilities.fork was advertised
 	 */
@@ -391,6 +416,26 @@ public final class NegotiatedCapabilities {
 		}
 	}
 
+	/**
+	 * Requires delete session capability, throwing if not supported.
+	 * @throws AcpCapabilityException if the agent doesn't support this capability
+	 */
+	public void requireDeleteSession() {
+		if (!deleteSession) {
+			throw new AcpCapabilityException("sessionCapabilities.delete");
+		}
+	}
+
+	/**
+	 * Requires additional directories capability, throwing if not supported.
+	 * @throws AcpCapabilityException if the agent doesn't support this capability
+	 */
+	public void requireAdditionalDirectories() {
+		if (!additionalDirectories) {
+			throw new AcpCapabilityException("sessionCapabilities.additionalDirectories");
+		}
+	}
+
 	public void requireForkSession() {
 		if (!forkSession) {
 			throw new AcpCapabilityException("sessionCapabilities.fork");
@@ -423,7 +468,8 @@ public final class NegotiatedCapabilities {
 				+ ", terminal=" + terminal + ", elicitation=" + elicitation + ", elicitationForm="
 				+ elicitationForm + ", elicitationUrl=" + elicitationUrl + ", loadSession=" + loadSession
 				+ ", listSessions=" + listSessions
-				+ ", closeSession=" + closeSession + ", resumeSession=" + resumeSession + ", forkSession="
+				+ ", closeSession=" + closeSession + ", resumeSession=" + resumeSession + ", deleteSession="
+				+ deleteSession + ", additionalDirectories=" + additionalDirectories + ", forkSession="
 				+ forkSession + ", imageContent="
 				+ imageContent + ", audioContent=" + audioContent + ", embeddedContext=" + embeddedContext
 				+ ", mcpHttp=" + mcpHttp + ", mcpSse=" + mcpSse + '}';
@@ -453,6 +499,10 @@ public final class NegotiatedCapabilities {
 		private boolean closeSession = false;
 
 		private boolean resumeSession = false;
+
+		private boolean deleteSession = false;
+
+		private boolean additionalDirectories = false;
 
 		private boolean forkSession = false;
 
@@ -513,6 +563,16 @@ public final class NegotiatedCapabilities {
 
 		public Builder resumeSession(boolean value) {
 			this.resumeSession = value;
+			return this;
+		}
+
+		public Builder deleteSession(boolean value) {
+			this.deleteSession = value;
+			return this;
+		}
+
+		public Builder additionalDirectories(boolean value) {
+			this.additionalDirectories = value;
 			return this;
 		}
 

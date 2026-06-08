@@ -273,9 +273,14 @@ public final class AcpSchema {
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public record NewSessionRequest(@JsonProperty("cwd") String cwd,
 			@JsonProperty("mcpServers") List<McpServer> mcpServers,
+			@JsonProperty("additionalDirectories") List<String> additionalDirectories,
 			@JsonProperty("_meta") Map<String, Object> meta) {
 		public NewSessionRequest(String cwd, List<McpServer> mcpServers) {
-			this(cwd, mcpServers, null);
+			this(cwd, mcpServers, null, null);
+		}
+
+		public NewSessionRequest(String cwd, List<McpServer> mcpServers, List<String> additionalDirectories) {
+			this(cwd, mcpServers, additionalDirectories, null);
 		}
 	}
 
@@ -299,9 +304,15 @@ public final class AcpSchema {
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public record LoadSessionRequest(@JsonProperty("sessionId") String sessionId, @JsonProperty("cwd") String cwd,
 			@JsonProperty("mcpServers") List<McpServer> mcpServers,
+			@JsonProperty("additionalDirectories") List<String> additionalDirectories,
 			@JsonProperty("_meta") Map<String, Object> meta) {
 		public LoadSessionRequest(String sessionId, String cwd, List<McpServer> mcpServers) {
-			this(sessionId, cwd, mcpServers, null);
+			this(sessionId, cwd, mcpServers, null, null);
+		}
+
+		public LoadSessionRequest(String sessionId, String cwd, List<McpServer> mcpServers,
+				List<String> additionalDirectories) {
+			this(sessionId, cwd, mcpServers, additionalDirectories, null);
 		}
 	}
 
@@ -482,9 +493,15 @@ public final class AcpSchema {
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public record ResumeSessionRequest(@JsonProperty("sessionId") String sessionId, @JsonProperty("cwd") String cwd,
 			@JsonProperty("mcpServers") List<McpServer> mcpServers,
+			@JsonProperty("additionalDirectories") List<String> additionalDirectories,
 			@JsonProperty("_meta") Map<String, Object> meta) {
 		public ResumeSessionRequest(String sessionId, String cwd, List<McpServer> mcpServers) {
-			this(sessionId, cwd, mcpServers, null);
+			this(sessionId, cwd, mcpServers, null, null);
+		}
+
+		public ResumeSessionRequest(String sessionId, String cwd, List<McpServer> mcpServers,
+				List<String> additionalDirectories) {
+			this(sessionId, cwd, mcpServers, additionalDirectories, null);
 		}
 	}
 
@@ -510,9 +527,15 @@ public final class AcpSchema {
 	public record ForkSessionRequest(@JsonProperty("sessionId") String sessionId,
 			@JsonProperty("cwd") String cwd,
 			@JsonProperty("mcpServers") List<McpServer> mcpServers,
+			@JsonProperty("additionalDirectories") List<String> additionalDirectories,
 			@JsonProperty("_meta") Map<String, Object> meta) {
 		public ForkSessionRequest(String sessionId, String cwd, List<McpServer> mcpServers) {
-			this(sessionId, cwd, mcpServers, null);
+			this(sessionId, cwd, mcpServers, null, null);
+		}
+
+		public ForkSessionRequest(String sessionId, String cwd, List<McpServer> mcpServers,
+				List<String> additionalDirectories) {
+			this(sessionId, cwd, mcpServers, additionalDirectories, null);
 		}
 	}
 
@@ -1034,10 +1057,15 @@ public final class AcpSchema {
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public record SessionCapabilities(@JsonProperty("list") Object list, @JsonProperty("close") Object close,
-			@JsonProperty("resume") Object resume,
+			@JsonProperty("resume") Object resume, @JsonProperty("delete") Object delete,
+			@JsonProperty("additionalDirectories") Object additionalDirectories,
 			@UnstableAcpApi @JsonProperty("fork") Object fork) {
 		public SessionCapabilities(Object list, Object close, Object resume) {
-			this(list, close, resume, null);
+			this(list, close, resume, null, null, null);
+		}
+
+		public SessionCapabilities(Object list, Object close, Object resume, Object fork) {
+			this(list, close, resume, null, null, fork);
 		}
 	}
 
@@ -1075,9 +1103,10 @@ public final class AcpSchema {
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public record SessionInfo(@JsonProperty("sessionId") String sessionId, @JsonProperty("cwd") String cwd,
 			@JsonProperty("title") String title, @JsonProperty("updatedAt") String updatedAt,
+			@JsonProperty("additionalDirectories") List<String> additionalDirectories,
 			@JsonProperty("_meta") Map<String, Object> meta) {
 		public SessionInfo(String sessionId, String cwd) {
-			this(sessionId, cwd, null, null, null);
+			this(sessionId, cwd, null, null, null, null);
 		}
 	}
 
@@ -1334,10 +1363,14 @@ public final class AcpSchema {
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public record UserMessageChunk(@JsonProperty("sessionUpdate") String sessionUpdate,
-			@JsonProperty("content") ContentBlock content,
+			@JsonProperty("content") ContentBlock content, @JsonProperty("messageId") String messageId,
 			@JsonProperty("_meta") Map<String, Object> meta) implements SessionUpdate {
 		public UserMessageChunk(String sessionUpdate, ContentBlock content) {
-			this(sessionUpdate, content, null);
+			this(sessionUpdate, content, null, null);
+		}
+
+		public UserMessageChunk(String sessionUpdate, ContentBlock content, String messageId) {
+			this(sessionUpdate, content, messageId, null);
 		}
 	}
 
@@ -1347,10 +1380,14 @@ public final class AcpSchema {
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public record AgentMessageChunk(@JsonProperty("sessionUpdate") String sessionUpdate,
-			@JsonProperty("content") ContentBlock content,
+			@JsonProperty("content") ContentBlock content, @JsonProperty("messageId") String messageId,
 			@JsonProperty("_meta") Map<String, Object> meta) implements SessionUpdate {
 		public AgentMessageChunk(String sessionUpdate, ContentBlock content) {
-			this(sessionUpdate, content, null);
+			this(sessionUpdate, content, null, null);
+		}
+
+		public AgentMessageChunk(String sessionUpdate, ContentBlock content, String messageId) {
+			this(sessionUpdate, content, messageId, null);
 		}
 	}
 
@@ -1360,10 +1397,14 @@ public final class AcpSchema {
 	@JsonIgnoreProperties(ignoreUnknown = true)
 	@JsonInclude(JsonInclude.Include.NON_NULL)
 	public record AgentThoughtChunk(@JsonProperty("sessionUpdate") String sessionUpdate,
-			@JsonProperty("content") ContentBlock content,
+			@JsonProperty("content") ContentBlock content, @JsonProperty("messageId") String messageId,
 			@JsonProperty("_meta") Map<String, Object> meta) implements SessionUpdate {
 		public AgentThoughtChunk(String sessionUpdate, ContentBlock content) {
-			this(sessionUpdate, content, null);
+			this(sessionUpdate, content, null, null);
+		}
+
+		public AgentThoughtChunk(String sessionUpdate, ContentBlock content, String messageId) {
+			this(sessionUpdate, content, messageId, null);
 		}
 	}
 

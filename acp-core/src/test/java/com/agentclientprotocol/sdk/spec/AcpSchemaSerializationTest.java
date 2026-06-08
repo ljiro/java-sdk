@@ -365,7 +365,7 @@ class AcpSchemaSerializationTest {
 	void sessionUpdateWithMetaSerialization() throws IOException {
 		Map<String, Object> meta = Map.of("custom/field", "value");
 		AcpSchema.AgentMessageChunk update = new AcpSchema.AgentMessageChunk("agent_message_chunk",
-				new AcpSchema.TextContent("Hello"), meta);
+				new AcpSchema.TextContent("Hello"), null, meta);
 
 		String json = jsonMapper.writeValueAsString(update);
 		assertThat(json).contains("\"_meta\"");
@@ -376,6 +376,58 @@ class AcpSchemaSerializationTest {
 
 		assertThat(deserialized.meta()).isNotNull();
 		assertThat(deserialized.meta().get("custom/field")).isEqualTo("value");
+	}
+
+	@Test
+	void messageChunkWithMessageIdSerialization() throws IOException {
+		AcpSchema.AgentMessageChunk update = new AcpSchema.AgentMessageChunk("agent_message_chunk",
+				new AcpSchema.TextContent("Hello"), "msg-42");
+
+		String json = jsonMapper.writeValueAsString(update);
+		assertThat(json).contains("\"messageId\":\"msg-42\"");
+
+		AcpSchema.AgentMessageChunk deserialized = jsonMapper.readValue(json,
+				new TypeRef<AcpSchema.AgentMessageChunk>() {
+				});
+
+		assertThat(deserialized.messageId()).isEqualTo("msg-42");
+	}
+
+	@Test
+	void messageChunkWithoutMessageIdOmitsField() throws IOException {
+		AcpSchema.AgentMessageChunk update = new AcpSchema.AgentMessageChunk("agent_message_chunk",
+				new AcpSchema.TextContent("Hello"));
+
+		String json = jsonMapper.writeValueAsString(update);
+		assertThat(json).doesNotContain("messageId");
+	}
+
+	@Test
+	void newSessionRequestWithAdditionalDirectoriesSerialization() throws IOException {
+		AcpSchema.NewSessionRequest request = new AcpSchema.NewSessionRequest("/workspace", Collections.emptyList(),
+				List.of("/extra/one", "/extra/two"));
+
+		String json = jsonMapper.writeValueAsString(request);
+		assertThat(json).contains("\"additionalDirectories\"");
+
+		AcpSchema.NewSessionRequest deserialized = jsonMapper.readValue(json,
+				new TypeRef<AcpSchema.NewSessionRequest>() {
+				});
+
+		assertThat(deserialized.additionalDirectories()).containsExactly("/extra/one", "/extra/two");
+	}
+
+	@Test
+	void sessionInfoWithAdditionalDirectoriesSerialization() throws IOException {
+		AcpSchema.SessionInfo info = new AcpSchema.SessionInfo("session-1", "/workspace", null, null,
+				List.of("/extra"), null);
+
+		String json = jsonMapper.writeValueAsString(info);
+
+		AcpSchema.SessionInfo deserialized = jsonMapper.readValue(json, new TypeRef<AcpSchema.SessionInfo>() {
+		});
+
+		assertThat(deserialized.additionalDirectories()).containsExactly("/extra");
 	}
 
 	// ---------------------------

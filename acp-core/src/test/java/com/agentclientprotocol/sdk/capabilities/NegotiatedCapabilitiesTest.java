@@ -160,6 +160,40 @@ class NegotiatedCapabilitiesTest {
 	}
 
 	@Test
+	void fromAgentExtractsDeleteAndAdditionalDirectoriesSessionCapabilities() {
+		// list, close, resume, delete, additionalDirectories, fork
+		AcpSchema.SessionCapabilities sessionCaps = new AcpSchema.SessionCapabilities(
+				java.util.Collections.emptyMap(), null, null, java.util.Collections.emptyMap(),
+				java.util.Collections.emptyMap(), null);
+		AcpSchema.AgentCapabilities agentCaps = new AcpSchema.AgentCapabilities(true, sessionCaps,
+				new AcpSchema.McpCapabilities(), new AcpSchema.PromptCapabilities(), null);
+
+		NegotiatedCapabilities caps = NegotiatedCapabilities.fromAgent(agentCaps);
+
+		assertThat(caps.supportsListSessions()).isTrue();
+		assertThat(caps.supportsCloseSession()).isFalse();
+		assertThat(caps.supportsDeleteSession()).isTrue();
+		assertThat(caps.supportsAdditionalDirectories()).isTrue();
+		assertThat(caps.supportsForkSession()).isFalse();
+	}
+
+	@Test
+	void requireDeleteSessionThrowsWhenNotSupported() {
+		NegotiatedCapabilities caps = NegotiatedCapabilities.fromAgent(null);
+
+		assertThatThrownBy(caps::requireDeleteSession).isInstanceOf(AcpCapabilityException.class)
+			.hasMessageContaining("sessionCapabilities.delete");
+	}
+
+	@Test
+	void requireAdditionalDirectoriesThrowsWhenNotSupported() {
+		NegotiatedCapabilities caps = NegotiatedCapabilities.fromAgent(null);
+
+		assertThatThrownBy(caps::requireAdditionalDirectories).isInstanceOf(AcpCapabilityException.class)
+			.hasMessageContaining("sessionCapabilities.additionalDirectories");
+	}
+
+	@Test
 	void requireLoadSessionThrowsWhenNotSupported() {
 		NegotiatedCapabilities caps = NegotiatedCapabilities.fromAgent(null);
 
