@@ -17,7 +17,9 @@ Protocol currency: catching up to ACP spec v0.13.6 (June 2026).
   stored session; gated on the `sessionCapabilities.delete` capability.
 - `additionalDirectories` on `session/new`, `session/load`, `session/resume`, `session/fork` requests
   and on `SessionInfo` — extra workspace roots beyond `cwd`.
-- Per-chunk `messageId` on `AgentMessageChunk`, `AgentThoughtChunk`, `UserMessageChunk`.
+- Per-chunk `messageId` on `AgentMessageChunk`, `AgentThoughtChunk`, `UserMessageChunk`, plus
+  `sendMessage(text, messageId)` / `sendThought(text, messageId)` convenience overloads on
+  `PromptContext` and `SyncPromptContext`.
 - `sessionCapabilities.delete` and `sessionCapabilities.additionalDirectories`, surfaced via
   `NegotiatedCapabilities` (`supports*`/`require*`).
 

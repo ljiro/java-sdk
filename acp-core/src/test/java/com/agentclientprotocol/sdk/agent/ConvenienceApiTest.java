@@ -149,6 +149,48 @@ class ConvenienceApiTest {
 	}
 
 	@Test
+	void sendMessageWithMessageIdSetsMessageId() throws Exception {
+		List<SessionNotification> receivedUpdates = new CopyOnWriteArrayList<>();
+		CountDownLatch latch = new CountDownLatch(1);
+
+		AcpSyncAgent agent = AcpAgent.sync(transportPair.agentTransport())
+			.requestTimeout(TIMEOUT)
+			.initializeHandler(req -> InitializeResponse.ok())
+			.newSessionHandler(req -> new NewSessionResponse("msgid-session", null, null))
+			.promptHandler((request, context) -> {
+				context.sendMessage("Hello with id!", "msg-7");
+				return PromptResponse.endTurn();
+			})
+			.build();
+
+		AcpAsyncClient client = AcpClient.async(transportPair.clientTransport())
+			.requestTimeout(TIMEOUT)
+			.sessionUpdateConsumer(notification -> {
+				receivedUpdates.add(notification);
+				latch.countDown();
+				return Mono.empty();
+			})
+			.build();
+
+		agent.start();
+		Thread.sleep(100);
+
+		client.initialize(new InitializeRequest(1, new ClientCapabilities())).block(TIMEOUT);
+		client.newSession(new NewSessionRequest("/workspace", List.of())).block(TIMEOUT);
+		client.prompt(new PromptRequest("msgid-session", List.of(new TextContent("test")))).block(TIMEOUT);
+
+		assertThat(latch.await(5, TimeUnit.SECONDS)).isTrue();
+		assertThat(receivedUpdates).hasSize(1);
+		assertThat(receivedUpdates.get(0).update()).isInstanceOf(AgentMessageChunk.class);
+		AgentMessageChunk chunk = (AgentMessageChunk) receivedUpdates.get(0).update();
+		assertThat(((TextContent) chunk.content()).text()).isEqualTo("Hello with id!");
+		assertThat(chunk.messageId()).isEqualTo("msg-7");
+
+		client.closeGracefully().block(TIMEOUT);
+		agent.closeGracefully();
+	}
+
+	@Test
 	void sendThoughtSendsAgentThoughtChunk() throws Exception {
 		List<SessionNotification> receivedUpdates = new CopyOnWriteArrayList<>();
 		CountDownLatch latch = new CountDownLatch(1);

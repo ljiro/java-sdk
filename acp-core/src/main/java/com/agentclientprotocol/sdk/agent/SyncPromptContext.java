@@ -185,12 +185,35 @@ public interface SyncPromptContext {
 	void sendMessage(String text);
 
 	/**
+	 * Sends a message to the client as an agent message chunk, tagged with a message ID.
+	 * Chunks sharing the same {@code messageId} belong to the same logical message; a change
+	 * in {@code messageId} signals a new message.
+	 * @param text The message text to send
+	 * @param messageId The message identifier, or {@code null} for none
+	 */
+	default void sendMessage(String text, String messageId) {
+		sendUpdate(getSessionId(),
+				new AcpSchema.AgentMessageChunk("agent_message_chunk", new AcpSchema.TextContent(text), messageId));
+	}
+
+	/**
 	 * Sends a thought to the client as an agent thought chunk.
 	 * Thoughts are typically displayed differently than messages,
 	 * showing the agent's reasoning process.
 	 * @param text The thought text to send
 	 */
 	void sendThought(String text);
+
+	/**
+	 * Sends a thought to the client as an agent thought chunk, tagged with a message ID.
+	 * Chunks sharing the same {@code messageId} belong to the same logical message.
+	 * @param text The thought text to send
+	 * @param messageId The message identifier, or {@code null} for none
+	 */
+	default void sendThought(String text, String messageId) {
+		sendUpdate(getSessionId(),
+				new AcpSchema.AgentThoughtChunk("agent_thought_chunk", new AcpSchema.TextContent(text), messageId));
+	}
 
 	/**
 	 * Reads a text file from the client's file system.
